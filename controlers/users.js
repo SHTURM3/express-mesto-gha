@@ -19,7 +19,7 @@ const changeAvatar = (request, response) => {
 
 const changeProfile = (request, response) => {
   const { name, about } = request.body;
-  User.findByIdAndUpdate(request.user._id, { name, about }, { new: true })
+  User.findByIdAndUpdate(request.user._id, { name, about }, { new: true, runValidators: true })
     .then((user) => {
       if (!user) {
         return response.status(404).send({ message: 'Такого пользователя не существует.' });
@@ -27,6 +27,7 @@ const changeProfile = (request, response) => {
       return response.status(200).send(user);
     })
     .catch((err) => {
+      console.log(err);
       if (err.name === 'ValidationError') {
         return response.status(400).send({ message: 'Имя или описание пользователя не должно быть менее 2-х и более 30-ти символов.' });
       }
