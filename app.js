@@ -23,6 +23,10 @@ app.use('/users', userRouter); // Пользователи (связанные �
 
 app.use('/cards', cardRouter); // Карточки (связанные файл: routes/cards.js; controllers/cards.js)
 
+app.use((_, response) => {
+  response.status(404).send({ message: 'Такой страницы не существует.' });
+});
+
 app.listen(PORT, () => {
   console.log('Сервер работает.');
 });

@@ -2,7 +2,7 @@ const User = require('../models/User');
 
 const changeAvatar = (request, response) => {
   const { avatar } = request.body;
-  User.findByIdAndUpdate(request.user._id, { avatar }, { new: true })
+  User.findByIdAndUpdate(request.user._id, { avatar }, { new: true, runValidators: true })
     .then((user) => {
       if (!user) {
         return response.status(404).send({ message: 'Такого пользователя не существует.' });
