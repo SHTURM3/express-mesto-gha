@@ -24,15 +24,12 @@ const changeProfile = (request, response) => {
       if (!user) {
         return response.status(404).send({ message: 'Такого пользователя не существует.' });
       }
-      if (user.name.length <= 2 || user.name.length > 30) {
-        return response.status(400).send({ message: 'Имя пользователя не должно быть менее 2-х и более 30-ти символов.' });
-      }
-      if (user.about.length <= 2 || user.about.length > 30) {
-        return response.status(400).send({ message: 'Описание пользователя не должно быть менее 2-х и более 30-ти символов.' });
-      }
       return response.status(200).send(user);
     })
     .catch((err) => {
+      if (err.name === 'ValidationError') {
+        return response.status(400).send({ message: 'Имя или описание пользователя не должно быть менее 2-х и более 30-ти символов.' });
+      }
       if (err.kind === 'ObjectId') {
         return response.status(400).send({ message: 'ID пользователя передано некорретно.' });
       }
