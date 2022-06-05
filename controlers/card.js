@@ -1,6 +1,9 @@
 const Card = require('../models/Card');
+const BadRequest = require('../errors/BadRequest');
+const NotFound = require('../errors/NotFound');
+const Forbidden = require('../errors/Forbidden');
 
-const dislikeCard = (request, response) => {
+const dislikeCard = (request, response, next) => {
   const { cardID } = request.params;
   Card.findByIdAndUpdate(
     cardID,
@@ -9,19 +12,19 @@ const dislikeCard = (request, response) => {
   )
     .then((card) => {
       if (!card) {
-        return response.status(404).send({ message: 'Данный пост не существует или удалён ранее.' });
+        throw new NotFound('Данный пост не существует или удалён ранее.');
       }
       return response.status(200).send({ message: 'Пост отмечен как не понравившейся.' });
     })
     .catch((err) => {
       if (err.kind === 'ObjectId') {
-        return response.status(400).send({ message: 'Данный пост не найден.' });
+        return next(new BadRequest('Данный пост не найден.'));
       }
-      return response.status(500).send({ message: 'Ошибка сервера.' });
+      return next(err);
     });
 };
 
-const likeCard = (request, response) => {
+const likeCard = (request, response, next) => {
   const { cardID } = request.params;
   Card.findByIdAndUpdate(
     cardID,
@@ -31,44 +34,47 @@ const likeCard = (request, response) => {
     .then((card) => {
       console.log('card: ', card);
       if (!card) {
-        return response.status(404).send({ message: 'Данный пост не существует или удалён ранее.' });
+        throw new NotFound('Данный пост не существует или удалён ранее.');
       }
       return response.status(200).send({ message: 'Пост отмечен как понравившейся.' });
     })
     .catch((err) => {
       if (err.kind === 'ObjectId') {
-        return response.status(400).send({ message: 'Данный пост не найден.' });
+        return next(new BadRequest('Данный пост не найден.'));
       }
-      return response.status(500).send({ message: 'Ошибка сервера.' });
+      return next(err);
     });
 };
 
-const deleteCard = (request, response) => {
-  const { cardID } = request.params;
-  Card.findByIdAndRemove(cardID)
+const deleteCard = (request, response, next) => {
+  Card.findById(request.params.cardID)
     .then((card) => {
       if (!card) {
-        return response.status(404).send({ message: 'Данный пост не существует или удалён ранее.' });
+        throw new NotFound('Данный пост не существует или удалён ранее.');
       }
-      return response.status(200).send({ message: 'Пост удалён.' });
+      if (!card.owner.equals(request.user._id)) {
+        throw new Forbidden('Вы не можете удалить пост другого пользователя.');
+      }
+      return card.remove()
+        .then(() => response.send({ data: card }));
     })
     .catch((err) => {
       if (err.kind === 'ObjectId') {
-        return response.status(400).send({ message: 'Данный пост не найден.' });
+        return next(new BadRequest('Данный пост не найден.'));
       }
-      return response.status(500).send({ message: 'Ошибка сервера.' });
+      return next(err);
     });
 };
 
 // eslint-disable-next-line consistent-return
-const createCard = (request, response) => {
+const createCard = (request, response, next) => {
   console.log('request.body: ', request.body);
   console.log('Id пользователя создавшего пост: ', request.user._id);
 
   const { name, link, owner = request.user._id } = request.body;
 
   if (!name || !link || !owner) {
-    return response.status(400).send({ message: 'Ошибка валидации. Имя, ссылка или автор поста не найдены.' });
+    throw new BadRequest('Ошибка валидации. Имя, ссылка или автор поста не найдены.');
   }
 
   Card.create({ name, link, owner })
@@ -77,38 +83,36 @@ const createCard = (request, response) => {
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        return response.status(400).send({ message: 'Проверьте правильность введенных данных.' });
+        return next(new BadRequest('Проверьте правильность введенных данных.'));
       }
-      return response.status(500).send({ message: 'Ошибка сервера.' });
+      return next(err);
     });
 };
 
-const getCard = (request, response) => {
+const getCard = (request, response, next) => {
   const { cardID } = request.params;
   console.log(cardID);
   Card.findById(cardID)
     .then((card) => {
       if (!card) {
-        return response.status(404).send({ message: 'Данный пост не найден.' });
+        throw new NotFound('Данный пост не найден.');
       }
       return response.status(200).send(card);
     })
     .catch((err) => {
       if (err.kind === 'ObjectId') {
-        return response.status(400).send({ message: 'ID поста передано некорретно.' });
+        return next(new BadRequest('ID пользователя передано некорретно.'));
       }
-      return response.status(500).send({ message: 'Ошибка сервера.' });
+      return next(err);
     });
 };
 
-const getCards = (_, response) => {
+const getCards = (_, response, next) => {
   Card.find({})
     .then((cards) => {
       response.status(200).send(cards);
     })
-    .catch(() => {
-      response.status(500).send({ message: 'Ошибка сервера.' });
-    });
+    .catch((next));
 };
 
 module.exports = {

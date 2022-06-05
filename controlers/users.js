@@ -1,102 +1,155 @@
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const BadRequest = require('../errors/BadRequest');
+const Conflict = require('../errors/Conflict');
+const NotFound = require('../errors/NotFound');
+const Unauthorized = require('../errors/Unauthorized');
 
-const changeAvatar = (request, response) => {
+const changeAvatar = (request, response, next) => {
   const { avatar } = request.body;
   User.findByIdAndUpdate(request.user._id, { avatar }, { new: true, runValidators: true })
     .then((user) => {
       if (!user) {
-        return response.status(404).send({ message: 'Такого пользователя не существует.' });
+        throw new NotFound('Такого пользователя не существует.');
       }
       return response.status(200).send(user);
     })
     .catch((err) => {
       if (err.kind === 'ObjectId') {
-        return response.status(400).send({ message: 'ID пользователя передано некорретно.' });
+        return next(new BadRequest('ID пользователя передано некорретно.'));
       }
-      return response.status(500).send({ message: 'Ошибка сервера.' });
+      return next(err);
     });
 };
 
-const changeProfile = (request, response) => {
+const changeProfile = (request, response, next) => {
   const { name, about } = request.body;
   User.findByIdAndUpdate(request.user._id, { name, about }, { new: true, runValidators: true })
     .then((user) => {
       if (!user) {
-        return response.status(404).send({ message: 'Такого пользователя не существует.' });
+        throw new NotFound('Такого пользователя не существует.');
       }
       return response.status(200).send(user);
     })
     .catch((err) => {
       console.log(err);
       if (err.name === 'ValidationError') {
-        return response.status(400).send({ message: 'Имя или описание пользователя не должно быть менее 2-х и более 30-ти символов.' });
+        return next(new BadRequest('Имя или описание пользователя не должно быть менее 2-х и более 30-ти символов.'));
       }
       if (err.kind === 'ObjectId') {
-        return response.status(400).send({ message: 'ID пользователя передано некорретно.' });
+        return next(new BadRequest('ID пользователя передано некорретно.'));
       }
-      return response.status(500).send({ message: 'Ошибка сервера.' });
+      return next(err);
     });
 };
 
-const getUser = (request, response) => {
+const getUser = (request, response, next) => {
   const { id } = request.params;
   User.findById(id)
     .then((user) => {
       if (!user) {
-        return response.status(404).send({ message: 'Такого пользователя не существует.' });
+        throw new NotFound('Такого пользователя не существует.');
       }
       return response.status(200).send(user);
     })
     .catch((err) => {
       if (err.kind === 'ObjectId') {
-        return response.status(400).send({ message: 'ID пользователя передано некорретно.' });
+        return next(new BadRequest('ID пользователя передано некорретно.'));
       }
-      return response.status(500).send({ message: 'Ошибка сервера.' });
+      return next(err);
     });
 };
 
+const getCurrentUser = (request, response, next) => {
+  console.log(request.matched);
+  User.findById(request.user._id)
+    .then((user) => {
+      if (!user) {
+        throw new BadRequest('Запрашиваемый пользователь не найден.');
+      }
+
+      return response.send({ data: user });
+    })
+    .catch((err) => next(err));
+};
+
 // eslint-disable-next-line consistent-return
-const createUser = (request, response) => {
+const createUser = (request, response, next) => {
   console.log('request.body: ', request.body);
-  console.log('Id пользователя создавшего карточку: ', request.user._id);
 
-  const { name, about, avatar } = request.body;
+  const {
+    email,
+    password,
+    name,
+    about,
+    avatar,
+  } = request.body;
 
-  if (!about || !name || !avatar) {
-    return response.status(400).send({ message: 'Ошибка валидации. Имя или описание пользователя не найдены.' });
+  if (!email || !password) {
+    throw new BadRequest('Логин или пароль не найдены или введены некорректно.');
   }
 
-  User.create({ name, about, avatar })
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({
+      email,
+      password: hash,
+      name,
+      about,
+      avatar,
+    }))
     .then((user) => {
-      response.status(201).send(user);
+      console.log(user);
+      response.status(201).send({
+        _id: user._id,
+        email: user.email,
+      });
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
         // const fields = Object.keys(err.errors).join(', ');
-        return response.status(400).send({ message: 'Проверьте правильность введенных данных.' });
+        return next(new BadRequest('Проверьте правильность введенных данных.'));
       }
 
       if (err.code === 11000) {
-        return response.status(409).send({ message: 'Такой пользователь уже существует.' });
+        return next(new Conflict('Такой пользователь уже существует.'));
       }
-      return response.status(500).send({ message: 'Ошибка сервера.' });
+      return next(err);
     });
 };
 
-const getUsers = (_, response) => {
+const login = (request, response, next) => {
+  console.log('request.body: ', request.body);
+  const { email, password } = request.body;
+
+  return User.findUserByCredentials(email, password)
+    .then((user) => {
+      if (!user) {
+        throw new BadRequest('Пользователь не найден.');
+      }
+      response.send({
+        token: jwt.sign({ _id: user._id }, 'yandex-practicum-thebest', { expiresIn: '7d' }),
+      });
+    })
+    .catch(() => {
+      next(new Unauthorized('Логин или пароль неверны.'));
+    });
+};
+
+const getUsers = (_, response, next) => {
   User.find({})
     .then((users) => {
       response.status(200).send(users);
     })
-    .catch(() => {
-      response.status(500).send({ message: 'Ошибка сервера.' });
-    });
+    .catch((next));
 };
 
 module.exports = {
   changeAvatar,
   changeProfile,
   getUser,
+  getCurrentUser,
   getUsers,
+  login,
   createUser,
 };
