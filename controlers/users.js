@@ -102,9 +102,9 @@ const createUser = (request, response, next) => {
       console.log(user);
       response.status(201).send({
         email: user.email,
-        name,
-        about,
-        avatar,
+        name: user.name,
+        about: user.about,
+        avatar: user.avatar,
       });
     })
     .catch((err) => {
