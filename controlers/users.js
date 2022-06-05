@@ -103,10 +103,6 @@ const createUser = (request, response, next) => {
       response.status(201).send({
         _id: user._id,
         email: user.email,
-        password,
-        name,
-        about,
-        avatar,
       });
     })
     .catch((err) => {
