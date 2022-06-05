@@ -101,8 +101,10 @@ const createUser = (request, response, next) => {
     .then((user) => {
       console.log(user);
       response.status(201).send({
-        _id: user._id,
         email: user.email,
+        name,
+        about,
+        avatar,
       });
     })
     .catch((err) => {
