@@ -1,17 +1,13 @@
 const jwt = require('jsonwebtoken');
-
-const handleAuthError = (res) => {
-  res.status(401).send({ message: 'Необходима авторизация' });
-};
+const Unauthorized = require('../errors/Unauthorized');
 
 const extractBearerToken = (header) => header.replace('Bearer ', '');
 
-// eslint-disable-next-line consistent-return
-module.exports = (req, res, next) => {
-  const { authorization } = req.headers;
+module.exports = (request, _, next) => {
+  const { authorization } = request.headers;
 
   if (!authorization || !authorization.startsWith('Bearer ')) {
-    return handleAuthError(res);
+    throw new Unauthorized('Необходима авторизация.');
   }
 
   const token = extractBearerToken(authorization);
@@ -20,10 +16,10 @@ module.exports = (req, res, next) => {
   try {
     payload = jwt.verify(token, 'yandex-practicum-thebest');
   } catch (err) {
-    return handleAuthError(res);
+    return next(new Unauthorized('Необходима авторизация.'));
   }
 
-  req.user = payload; // записываем пейлоуд в объект запроса
+  request.user = payload;
 
-  next(); // пропускаем запрос дальше
+  return next();
 };

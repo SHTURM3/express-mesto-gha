@@ -66,7 +66,6 @@ const deleteCard = (request, response, next) => {
     });
 };
 
-// eslint-disable-next-line consistent-return
 const createCard = (request, response, next) => {
   console.log('request.body: ', request.body);
   console.log('Id пользователя создавшего пост: ', request.user._id);
@@ -89,24 +88,6 @@ const createCard = (request, response, next) => {
     });
 };
 
-const getCard = (request, response, next) => {
-  const { cardID } = request.params;
-  console.log(cardID);
-  Card.findById(cardID)
-    .then((card) => {
-      if (!card) {
-        throw new NotFound('Данный пост не найден.');
-      }
-      return response.status(200).send(card);
-    })
-    .catch((err) => {
-      if (err.kind === 'ObjectId') {
-        return next(new BadRequest('ID пользователя передано некорретно.'));
-      }
-      return next(err);
-    });
-};
-
 const getCards = (_, response, next) => {
   Card.find({})
     .then((cards) => {
@@ -120,6 +101,5 @@ module.exports = {
   likeCard,
   deleteCard,
   createCard,
-  getCard,
   getCards,
 };

@@ -17,10 +17,6 @@ const { PORT = 3000 } = process.env;
 
 app.use(express.json());
 
-app.use('/users', auth, userRouter); // Пользователи (связанные файл: routes/users.js; controllers/users.js)
-
-app.use('/cards', auth, cardRouter); // Карточки (связанные файл: routes/cards.js; controllers/cards.js)
-
 app.post('/signin', celebrate({
   body: Joi.object().keys({
     email: Joi.string().required().email(),
@@ -38,7 +34,13 @@ app.post('/signup', celebrate({
   }),
 }), createUser);
 
-app.use((_, __, next) => next(new NotFound('Такой страницы не существует.')));
+app.use(auth);
+
+app.use('/users', userRouter); // Пользователи (связанные файл: routes/users.js; controllers/users.js)
+
+app.use('/cards', cardRouter); // Карточки (связанные файл: routes/cards.js; controllers/cards.js)
+
+app.use('*', (_, __, next) => next(new NotFound('Такой страницы не существует.')));
 
 app.use(errors());
 

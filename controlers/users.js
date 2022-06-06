@@ -66,7 +66,7 @@ const getCurrentUser = (request, response, next) => {
   User.findById(request.user._id)
     .then((user) => {
       if (!user) {
-        throw new BadRequest('Запрашиваемый пользователь не найден.');
+        throw new NotFound('Запрашиваемый пользователь не найден.');
       }
 
       return response.send({ data: user });
@@ -85,10 +85,6 @@ const createUser = (request, response, next) => {
     about,
     avatar,
   } = request.body;
-
-  if (!email || !password) {
-    throw new BadRequest('Логин или пароль не найдены или введены некорректно.');
-  }
 
   bcrypt.hash(password, 10)
     .then((hash) => User.create({

@@ -2,7 +2,6 @@ const router = require('express').Router();
 const { celebrate, Joi } = require('celebrate');
 const {
   getCards,
-  getCard,
   createCard,
   deleteCard,
   likeCard,
@@ -35,8 +34,6 @@ router.post('', celebrate({
     link: Joi.string().required().pattern(regEx),
   }),
 }), createCard);
-
-router.get('/:cardID', getCard);
 
 router.get('', getCards);
 
