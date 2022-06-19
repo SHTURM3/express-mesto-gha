@@ -4,6 +4,7 @@ const { errors, celebrate, Joi } = require('celebrate');
 const { userRouter } = require('./routes/users');
 const { cardRouter } = require('./routes/card');
 const { login, createUser } = require('./controlers/users');
+const { requestLogger, errorLogger } = require('./middlewares/logger');
 const auth = require('./middlewares/auth');
 const NotFound = require('./errors/NotFound');
 
@@ -16,6 +17,8 @@ const app = express();
 const { PORT = 3000 } = process.env;
 
 app.use(express.json());
+
+app.use(requestLogger);
 
 app.post('/signin', celebrate({
   body: Joi.object().keys({
@@ -41,6 +44,8 @@ app.use('/users', userRouter); // Пользователи (связанные �
 app.use('/cards', cardRouter); // Карточки (связанные файл: routes/cards.js; controllers/cards.js)
 
 app.use('*', (_, __, next) => next(new NotFound('Такой страницы не существует.')));
+
+app.use(errorLogger);
 
 app.use(errors());
 
